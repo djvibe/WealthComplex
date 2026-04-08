@@ -103,3 +103,8 @@ Create one shared envelope schema for exports:
 Implement **`wealthgrabber export all --format json --out snapshot.json`** first, then build a minimal browser page that reads this file.
 
 This creates a low-risk bridge from “downloader CLI” to “visual wealth experience.”
+
+
+## Follow-up
+
+For a concrete phased implementation plan, see `docs/frontend-delivery-strategy.md`.

@@ -49,6 +49,8 @@ src/wealthgrabber/
 ├── activities.py        # Activity/transaction logic
 ├── assets.py            # Asset position logic
 ├── cli.py               # Typer CLI application
+├── exporting.py         # Unified snapshot export contract
+├── dashboard.py         # Static dashboard HTML rendering
 tests/                   # Pytest suite
 pyproject.toml           # Project configuration
 ```
@@ -120,6 +122,13 @@ wealthgrabber list --format json
 wealthgrabber activities --format json --dividends
 wealthgrabber assets --format json --by-account
 
+# Unified export for web/desktop UI
+wealthgrabber export all --out snapshot.json
+
+# Generate local dashboard HTML
+wealthgrabber dashboard --snapshot snapshot.json --open
+wealthgrabber dashboard --no-open
+
 # CSV format
 wealthgrabber list --format csv > accounts.csv
 wealthgrabber activities --format csv > activities.csv
@@ -158,6 +167,25 @@ To add a new output format (e.g., XML):
    ```
 
 No other changes needed - data retrieval and CLI plumbing remain the same.
+
+
+## Dashboard / Export Pattern
+
+The repo now includes a UI bridge pattern that keeps API/auth logic in Python:
+
+- `build_export_snapshot()` in `exporting.py` builds a canonical payload with:
+  - `schema_version`, `generated_at`
+  - `accounts`, `activities`, `positions`
+  - `totals` (`portfolio_value`, `book_value`, `pnl`)
+  - `meta` (`base_currency`, `source`)
+- `wealthgrabber export all` writes this payload to JSON.
+- `wealthgrabber dashboard` renders a local static HTML dashboard from either:
+  - a provided snapshot (`--snapshot`), or
+  - a live fetch when no snapshot is provided.
+
+When extending this pattern:
+- Keep export schema changes backward-compatible where possible.
+- Prefer additive fields before changing/removing existing keys.
 
 ## PR Instructions
 - Ensure `uv run pytest` passes before finishing.
