@@ -177,3 +177,14 @@ Comma-separated values for import into spreadsheets or other tools.
 ## Development
 
 If you are an AI assistant or a developer looking to contribute, please refer to [CLAUDE.md](CLAUDE.md) for detailed guidelines.
+
+## Product Ideas / Visual Dashboard
+
+If you want to evolve `wealthgrabber` from a downloader CLI into a richer viewing experience, see:
+
+- [`docs/view-experience-opportunities.md`](docs/view-experience-opportunities.md)
+
+It outlines:
+- a local-first dashboard MVP approach,
+- snapshot/"recording overlay" timeline ideas, and
+- a phased implementation roadmap.
