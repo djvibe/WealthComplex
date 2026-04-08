@@ -1,5 +1,7 @@
 from enum import Enum
+from pathlib import Path
 from typing import Optional
+import webbrowser
 
 import typer
 
@@ -9,8 +11,12 @@ from .assets import print_assets
 from .analyze import print_analysis
 from .auth import get_authenticated_client
 from .auth import logout as auth_logout
+from .dashboard import write_dashboard
+from .exporting import build_export_snapshot, load_export_snapshot, save_export_snapshot
 
 app = typer.Typer(help="Wealthsimple Account Viewer CLI", no_args_is_help=True)
+export_app = typer.Typer(help="Export portfolio data for external tools")
+app.add_typer(export_app, name="export")
 
 
 class OutputFormat(str, Enum):
@@ -226,6 +232,82 @@ def assets(
         raise
     except Exception as e:
         print(f"Error fetching assets: {e}")
+        raise typer.Exit(code=1)
+
+
+@export_app.command("all")
+def export_all(
+    ctx: typer.Context,
+    out: Path = typer.Option(
+        Path("snapshot.json"),
+        "--out",
+        "-o",
+        help="Output file for unified JSON snapshot.",
+    ),
+    activities_limit: int = typer.Option(
+        200,
+        "--activities-limit",
+        help="Maximum activities per account for the export payload.",
+    ),
+):
+    """Export accounts, activities, and positions into a single JSON snapshot."""
+    verbose = ctx.obj.get("verbose") if ctx.obj else False
+    ws = get_authenticated_client(verbose=verbose)
+    if not ws:
+        print("Could not authenticate.")
+        raise typer.Exit(code=1)
+
+    try:
+        snapshot = build_export_snapshot(ws, activities_limit=activities_limit)
+        written = save_export_snapshot(snapshot, out)
+        print(f"Export written to: {written}")
+    except Exception as e:
+        print(f"Error exporting snapshot: {e}")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def dashboard(
+    ctx: typer.Context,
+    snapshot: Optional[Path] = typer.Option(
+        None,
+        "--snapshot",
+        "-s",
+        help="Existing snapshot file to render (if omitted, a live snapshot is fetched).",
+    ),
+    out: Optional[Path] = typer.Option(
+        None,
+        "--out",
+        "-o",
+        help="Output HTML file path for generated dashboard.",
+    ),
+    open_browser: bool = typer.Option(
+        True,
+        "--open/--no-open",
+        help="Open generated dashboard in your default browser.",
+    ),
+):
+    """Generate a local dashboard HTML from snapshot data."""
+    try:
+        if snapshot:
+            payload = load_export_snapshot(snapshot)
+        else:
+            verbose = ctx.obj.get("verbose") if ctx.obj else False
+            ws = get_authenticated_client(verbose=verbose)
+            if not ws:
+                print("Could not authenticate.")
+                raise typer.Exit(code=1)
+            payload = build_export_snapshot(ws)
+
+        html_path = write_dashboard(payload, out_path=out)
+        print(f"Dashboard written to: {html_path}")
+
+        if open_browser:
+            webbrowser.open(html_path.resolve().as_uri())
+    except typer.Exit:
+        raise
+    except Exception as e:
+        print(f"Error generating dashboard: {e}")
         raise typer.Exit(code=1)
 
 

@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -459,3 +460,65 @@ def test_assets_command_profits_with_by_account(mock_print, mock_get_auth):
         verbose=False,
         pnl_filter="profit",
     )
+
+# Export and dashboard command tests
+
+
+@patch("wealthgrabber.cli.get_authenticated_client")
+@patch("wealthgrabber.cli.save_export_snapshot")
+@patch("wealthgrabber.cli.build_export_snapshot")
+def test_export_all_command_success(mock_build, mock_save, mock_get_auth):
+    mock_ws = MagicMock()
+    mock_get_auth.return_value = mock_ws
+    mock_build.return_value = {"schema_version": "1.0"}
+
+    result = runner.invoke(app, ["export", "all", "--out", "snapshot.json"])
+
+    assert result.exit_code == 0
+    mock_build.assert_called_with(mock_ws, activities_limit=200)
+    mock_save.assert_called_once()
+    assert "Export written to" in result.stdout
+
+
+@patch("wealthgrabber.cli.get_authenticated_client")
+def test_export_all_command_auth_fail(mock_get_auth):
+    mock_get_auth.return_value = None
+
+    result = runner.invoke(app, ["export", "all"])
+
+    assert result.exit_code == 1
+    assert "Could not authenticate" in result.stdout
+
+
+@patch("wealthgrabber.cli.webbrowser.open")
+@patch("wealthgrabber.cli.write_dashboard")
+@patch("wealthgrabber.cli.load_export_snapshot")
+def test_dashboard_command_from_snapshot(mock_load, mock_write, mock_open_browser):
+    mock_load.return_value = {"schema_version": "1.0", "totals": {}, "meta": {}}
+    mock_write.return_value = Path("/tmp/dashboard.html")
+
+    result = runner.invoke(app, ["dashboard", "--snapshot", "snapshot.json"])
+
+    assert result.exit_code == 0
+    mock_load.assert_called_once()
+    mock_write.assert_called_once()
+    mock_open_browser.assert_called_once()
+
+
+@patch("wealthgrabber.cli.webbrowser.open")
+@patch("wealthgrabber.cli.write_dashboard")
+@patch("wealthgrabber.cli.build_export_snapshot")
+@patch("wealthgrabber.cli.get_authenticated_client")
+def test_dashboard_command_live_fetch(
+    mock_get_auth, mock_build, mock_write, mock_open_browser
+):
+    mock_ws = MagicMock()
+    mock_get_auth.return_value = mock_ws
+    mock_build.return_value = {"schema_version": "1.0", "totals": {}, "meta": {}}
+    mock_write.return_value = Path("/tmp/dashboard.html")
+
+    result = runner.invoke(app, ["dashboard", "--no-open"])
+
+    assert result.exit_code == 0
+    mock_build.assert_called_with(mock_ws)
+    mock_open_browser.assert_not_called()

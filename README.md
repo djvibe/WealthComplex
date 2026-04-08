@@ -49,7 +49,7 @@ uv run wealthgrabber --help
 
 ## Usage
 
-The CLI provides six main commands: `login`, `logout`, `list`, `activities`, `assets`, and `analyze`.
+The CLI provides eight main commands/features: `login`, `logout`, `list`, `activities`, `assets`, `export all`, `dashboard`, and `analyze`.
 
 All commands support the `--verbose/-v` flag for detailed status messages during execution.
 
@@ -164,6 +164,41 @@ wealthgrabber assets --format csv > positions.csv
 ```
 
 
+
+### Unified Export
+
+#### Export Everything to One Snapshot
+Generate a single JSON payload with accounts, activities, positions, and totals for downstream apps.
+
+```bash
+wealthgrabber export all --out snapshot.json
+```
+
+**Options:**
+- `--out/-o PATH`: Output file path (default: `snapshot.json`).
+- `--activities-limit N`: Maximum activities per account included in the snapshot (default: 200).
+
+### Dashboard
+
+#### Generate Local Dashboard HTML
+Create a local interactive dashboard from a snapshot file or a live fetch.
+
+```bash
+# From live API data
+wealthgrabber dashboard --open
+
+# From existing snapshot
+wealthgrabber dashboard --snapshot snapshot.json --open
+
+# Generate file without opening browser
+wealthgrabber dashboard --snapshot snapshot.json --out dashboard.html --no-open
+```
+
+**Options:**
+- `--snapshot/-s PATH`: Read an existing export snapshot instead of fetching live data.
+- `--out/-o PATH`: Output HTML path (default: `~/.wealthgrabber/dashboard/index.html`).
+- `--open/--no-open`: Open generated dashboard in default browser (default: open).
+
 ### Analyze Portfolio (Historical Insights)
 Use persisted snapshots to generate portfolio insights over time.
 
@@ -179,6 +214,8 @@ wealthgrabber analyze --lookback-days 180 --format json
 ## Snapshot Storage
 
 Every time you run `list`, `activities`, or `assets`, the fetched data is snapshotted locally with a UTC timestamp.
+
+You can also create a unified UI-oriented snapshot with `wealthgrabber export all --out snapshot.json`.
 
 Default root:
 - `~/.wealthgrabber/snapshots/`
@@ -214,8 +251,9 @@ If you are an AI assistant or a developer looking to contribute, please refer to
 If you want to evolve `wealthgrabber` from a downloader CLI into a richer viewing experience, see:
 
 - [`docs/view-experience-opportunities.md`](docs/view-experience-opportunities.md)
+- [`docs/frontend-delivery-strategy.md`](docs/frontend-delivery-strategy.md)
 
-It outlines:
-- a local-first dashboard MVP approach,
-- snapshot/"recording overlay" timeline ideas, and
-- a phased implementation roadmap.
+They outline:
+- the local-first dashboard roadmap,
+- snapshot/timeline ideas, and
+- phased implementation details now being delivered in CLI commands (`export all`, `dashboard`).
