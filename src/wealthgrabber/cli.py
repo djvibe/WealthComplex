@@ -6,6 +6,7 @@ import typer
 from .accounts import print_accounts
 from .activities import get_account_id_by_number, print_activities
 from .assets import print_assets
+from .analyze import print_analysis
 from .auth import get_authenticated_client
 from .auth import logout as auth_logout
 
@@ -225,6 +226,23 @@ def assets(
         raise
     except Exception as e:
         print(f"Error fetching assets: {e}")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def analyze(
+    lookback_days: int = typer.Option(
+        90, "--lookback-days", "-d", help="Number of days of stored snapshots to analyze."
+    ),
+    output_format: OutputFormat = typer.Option(
+        OutputFormat.table, "--format", "-f", help="Output format."
+    ),
+):
+    """Analyze historical snapshots and provide portfolio insights."""
+    try:
+        print_analysis(lookback_days=lookback_days, output_format=output_format.value)
+    except Exception as e:
+        print(f"Error analyzing snapshots: {e}")
         raise typer.Exit(code=1)
 
 

@@ -6,6 +6,7 @@ from ws_api import WealthsimpleAPI
 
 from .formatters import get_formatter
 from .models import ActivityData
+from .snapshots import SNAPSHOT_ACTIVITIES, write_snapshot
 
 DIVIDEND_TYPES = {"DIY_DIVIDEND", "DIVIDEND", "DISTRIBUTION"}
 
@@ -223,6 +224,7 @@ def print_activities(
         print("\nFetching activities...")
 
     activities_data = get_activities_data(ws, account_id, dividends_only, limit)
+    write_snapshot(SNAPSHOT_ACTIVITIES, activities_data)
 
     if not activities_data:
         print("No activities found.")

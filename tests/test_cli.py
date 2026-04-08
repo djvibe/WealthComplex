@@ -305,6 +305,24 @@ def test_logout_command_all_options(mock_logout):
     mock_logout.assert_called_with(username="user@example.com", clear_email=True)
 
 
+
+@patch("wealthgrabber.cli.print_analysis")
+def test_analyze_command_success(mock_print_analysis):
+    """Test analyze command success path."""
+    result = runner.invoke(app, ["analyze"])
+
+    assert result.exit_code == 0
+    mock_print_analysis.assert_called_with(lookback_days=90, output_format="table")
+
+
+@patch("wealthgrabber.cli.print_analysis")
+def test_analyze_command_with_options(mock_print_analysis):
+    """Test analyze command with custom options."""
+    result = runner.invoke(app, ["analyze", "--lookback-days", "180", "--format", "json"])
+
+    assert result.exit_code == 0
+    mock_print_analysis.assert_called_with(lookback_days=180, output_format="json")
+
 # Assets command tests
 
 
