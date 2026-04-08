@@ -5,6 +5,7 @@ from ws_api import WealthsimpleAPI
 
 from .formatters import get_formatter
 from .models import PositionData
+from .snapshots import SNAPSHOT_ASSETS, write_snapshot
 
 
 def _position_has_account(position: dict, account_id: str) -> bool:
@@ -315,6 +316,7 @@ def print_assets(
         print("\nFetching positions...")
 
     positions_data = get_assets_data(ws, account_id, by_account, currency, pnl_filter)
+    write_snapshot(SNAPSHOT_ASSETS, positions_data)
 
     if not positions_data:
         print("No positions found.")

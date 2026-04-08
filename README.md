@@ -49,7 +49,7 @@ uv run wealthgrabber --help
 
 ## Usage
 
-The CLI provides five main commands: `login`, `logout`, `list`, `activities`, and `assets`.
+The CLI provides six main commands: `login`, `logout`, `list`, `activities`, `assets`, and `analyze`.
 
 All commands support the `--verbose/-v` flag for detailed status messages during execution.
 
@@ -162,6 +162,37 @@ wealthgrabber assets --account TFSA-001 --format json
 # Export all positions to CSV
 wealthgrabber assets --format csv > positions.csv
 ```
+
+
+### Analyze Portfolio (Historical Insights)
+Use persisted snapshots to generate portfolio insights over time.
+
+```bash
+wealthgrabber analyze
+wealthgrabber analyze --lookback-days 180 --format json
+```
+
+**Options:**
+- `--lookback-days/-d N`: Number of days of stored snapshots to analyze (default: 90).
+- `--format/-f {table,json,csv}`: Output format (default: table).
+
+## Snapshot Storage
+
+Every time you run `list`, `activities`, or `assets`, the fetched data is snapshotted locally with a UTC timestamp.
+
+Default root:
+- `~/.wealthgrabber/snapshots/`
+
+Structure:
+```
+~/.wealthgrabber/snapshots/
+  accounts/YYYY/MM/DD/HHMMSS-microseconds.json
+  activities/YYYY/MM/DD/HHMMSS-microseconds.json
+  assets/YYYY/MM/DD/HHMMSS-microseconds.json
+```
+
+Override root directory with:
+- `WEALTHGRABBER_DATA_DIR=/path/to/data`
 
 ## Output Formats
 

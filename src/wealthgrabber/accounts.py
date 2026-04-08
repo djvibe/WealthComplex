@@ -2,6 +2,7 @@ from ws_api import WealthsimpleAPI
 
 from .formatters import get_formatter
 from .models import AccountData
+from .snapshots import SNAPSHOT_ACCOUNTS, write_snapshot
 
 
 def _extract_account_value(account: dict) -> tuple[float, str]:
@@ -125,6 +126,7 @@ def print_accounts(
         print("\nFetching accounts...")
 
     accounts_data = get_accounts_data(ws, show_zero_balances, liquid_only, not_liquid)
+    write_snapshot(SNAPSHOT_ACCOUNTS, accounts_data)
 
     if not accounts_data:
         print("No accounts found.")
