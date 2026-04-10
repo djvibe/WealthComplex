@@ -313,6 +313,10 @@ Structure:
 Override root directory with:
 - `WEALTHGRABBER_DATA_DIR=/path/to/data`
 
+Repo-local scratch outputs:
+- Use `working/` for temporary repo-local artifacts such as ad hoc exports, dashboard files, Playwright captures, and other debugging output.
+- `working/` is git-ignored on purpose.
+
 ## Troubleshooting
 
 ### Keyring backend errors

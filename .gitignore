@@ -29,8 +29,12 @@ learnings.mv2
 
 # Local agent state
 .codex/
+.playwright-cli/
 
 # Generated wealthgrabber local data
 snapshot.json
 *.snapshot.json
 .wealthgrabber/
+
+# Repo-local scratch outputs
+working/
