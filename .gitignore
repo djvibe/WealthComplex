@@ -28,6 +28,7 @@ learnings.mv2
 .rcloneignore
 
 # Local agent state
+.codex
 .codex/
 .playwright-cli/
 
