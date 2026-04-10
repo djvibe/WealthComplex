@@ -26,3 +26,11 @@ learnings.mv2
 .codebase-memory/
 .rclone-filter
 .rcloneignore
+
+# Local agent state
+.codex/
+
+# Generated wealthgrabber local data
+snapshot.json
+*.snapshot.json
+.wealthgrabber/
