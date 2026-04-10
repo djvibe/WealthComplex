@@ -317,6 +317,13 @@ Repo-local scratch outputs:
 - Use `working/` for temporary repo-local artifacts such as ad hoc exports, dashboard files, Playwright captures, and other debugging output.
 - `working/` is git-ignored on purpose.
 
+Write-path rules:
+- Durable app data belongs under `WEALTHGRABBER_DATA_DIR` or `~/.wealthgrabber` by default.
+- `list`, `activities`, and `assets` write timestamped history under `snapshots/`.
+- `export all` writes dated unified JSON under `exports/` unless `--out` is provided.
+- `dashboard` writes dated HTML under `dashboards/` and refreshes `dashboard/index.html` as the latest convenience copy when `--out` is omitted.
+- Avoid writing generated artifacts into the repository root; use `working/` for repo-local scratch files.
+
 ## Troubleshooting
 
 ### Keyring backend errors

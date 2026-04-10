@@ -226,6 +226,11 @@ The repo now includes a UI bridge pattern that keeps API/auth logic in Python:
   - `dashboards/YYYY/MM/DD/*.html`
   - `dashboard/index.html` for the latest dashboard convenience copy
 - Use repo-local `working/` for temporary scratch artifacts created during development or debugging; it is git-ignored and separate from durable app data in `~/.wealthgrabber`.
+- Code write-path contract:
+  - `list`, `activities`, and `assets` write only to the durable `snapshots/` tree.
+  - `export all` defaults to the durable `exports/` tree unless the caller passes `--out`.
+  - `dashboard` defaults to the durable `dashboards/` tree and refreshes `dashboard/index.html` unless the caller passes `--out`.
+  - Do not introduce new default writes into the repository root; use `working/` for repo-local scratch artifacts.
 - `analyze.py` loads stored command snapshots and can fall back to dated unified export history when raw per-command history is unavailable. It derives:
   - portfolio value change over the lookback window
   - unrealized P&L
