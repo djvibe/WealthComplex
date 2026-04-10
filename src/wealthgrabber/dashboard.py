@@ -3,20 +3,21 @@
 from __future__ import annotations
 
 import json
-from html import escape
 from pathlib import Path
 from typing import Any
 
-from wealthgrabber.snapshots import get_data_root
-
-
-def _default_dashboard_path() -> Path:
-    return get_data_root() / "dashboard" / "index.html"
+from wealthgrabber.snapshots import (
+    default_dashboard_path,
+    get_dashboard_latest_path,
+    write_latest_copy,
+)
 
 
 def render_dashboard_html(snapshot: dict[str, Any]) -> str:
     """Render single-file dashboard HTML using embedded snapshot data."""
-    data_json = escape(json.dumps(snapshot))
+    # Embed snapshot data as inert JSON instead of executable JS text so
+    # browser parsing is not affected by HTML entity escaping.
+    data_json = json.dumps(snapshot).replace("</", "<\\/")
 
     return f"""<!doctype html>
 <html lang=\"en\">
@@ -86,8 +87,9 @@ def render_dashboard_html(snapshot: dict[str, Any]) -> str:
     </div>
   </div>
 
+<script id="snapshot-data" type="application/json">{data_json}</script>
 <script>
-const snapshot = JSON.parse(`{data_json}`);
+const snapshot = JSON.parse(document.getElementById('snapshot-data').textContent || '{{}}');
 const money = (n, ccy = (snapshot.meta?.base_currency || 'CAD')) => `${{Number(n || 0).toLocaleString(undefined, {{maximumFractionDigits: 2, minimumFractionDigits: 2}})}} ${{ccy || snapshot.meta?.base_currency || 'CAD'}}`;
 
 const positions = snapshot.positions || [];
@@ -173,7 +175,9 @@ init();
 
 def write_dashboard(snapshot: dict[str, Any], out_path: Path | None = None) -> Path:
     """Write dashboard HTML and return path."""
-    path = out_path or _default_dashboard_path()
+    path = out_path or default_dashboard_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(render_dashboard_html(snapshot), encoding="utf-8")
+    if out_path is None:
+        write_latest_copy(path, get_dashboard_latest_path())
     return path

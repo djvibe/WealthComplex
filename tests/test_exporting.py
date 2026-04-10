@@ -1,6 +1,7 @@
+import json
 from unittest.mock import MagicMock, patch
 
-from wealthgrabber.exporting import build_export_snapshot
+from wealthgrabber.exporting import build_export_snapshot, save_export_snapshot
 from wealthgrabber.models import AccountData, ActivityData, PositionData
 
 
@@ -61,3 +62,14 @@ def test_build_export_snapshot_structure():
     assert len(payload["accounts"]) == 1
     assert len(payload["activities"]) == 1
     assert len(payload["positions"]) == 1
+
+
+def test_save_export_snapshot_defaults_to_dated_history(monkeypatch, tmp_path):
+    monkeypatch.setenv("WEALTHGRABBER_DATA_DIR", str(tmp_path))
+
+    written = save_export_snapshot({"schema_version": "1.0"})
+
+    assert written.exists()
+    assert written.parent.parent.parent.parent == tmp_path / "exports"
+    saved = json.loads(written.read_text(encoding="utf-8"))
+    assert saved["schema_version"] == "1.0"

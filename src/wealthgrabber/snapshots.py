@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from dataclasses import asdict, is_dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -29,6 +30,43 @@ def get_data_root() -> Path:
 def get_snapshots_root() -> Path:
     """Return root directory where snapshots are stored."""
     return get_data_root() / "snapshots"
+
+
+def get_exports_root() -> Path:
+    """Return root directory where unified export snapshots are stored."""
+    return get_data_root() / "exports"
+
+
+def get_dashboards_root() -> Path:
+    """Return root directory where dated dashboard files are stored."""
+    return get_data_root() / "dashboards"
+
+
+def get_dashboard_latest_path() -> Path:
+    """Return stable convenience path for the latest generated dashboard."""
+    return get_data_root() / "dashboard" / "index.html"
+
+
+def _timestamped_path(root: Path, *, extension: str, now: datetime | None = None) -> Path:
+    """Build a dated path rooted under ``root``."""
+    current = now or datetime.now(UTC)
+    return (
+        root
+        / f"{current.year:04d}"
+        / f"{current.month:02d}"
+        / f"{current.day:02d}"
+        / f"{current.strftime('%H%M%S')}-{current.microsecond:06d}.{extension}"
+    )
+
+
+def default_export_snapshot_path(now: datetime | None = None) -> Path:
+    """Return default dated path for a unified export snapshot."""
+    return _timestamped_path(get_exports_root(), extension="json", now=now)
+
+
+def default_dashboard_path(now: datetime | None = None) -> Path:
+    """Return default dated path for a generated dashboard file."""
+    return _timestamped_path(get_dashboards_root(), extension="html", now=now)
 
 
 def _serialize_record(record: Any) -> dict[str, Any]:
@@ -71,6 +109,16 @@ def write_snapshot(snapshot_type: str, records: Sequence[Any]) -> Path | None:
         return None
 
 
+def write_latest_copy(source_path: Path, latest_path: Path) -> Path | None:
+    """Update a stable latest-file copy for convenience."""
+    try:
+        latest_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_path, latest_path)
+        return latest_path
+    except Exception:
+        return None
+
+
 def _iter_snapshot_files(snapshot_type: str) -> list[Path]:
     """Return snapshot files for a snapshot type in chronological order."""
     root = get_snapshots_root() / snapshot_type
@@ -99,4 +147,30 @@ def load_snapshots(snapshot_type: str, lookback_days: int | None = None) -> list
             continue
 
     snapshots.sort(key=lambda s: str(s.get("created_at", "")))
+    return snapshots
+
+
+def load_export_snapshots(lookback_days: int | None = None) -> list[dict[str, Any]]:
+    """Load dated unified export snapshots."""
+    root = get_exports_root()
+    if not root.exists():
+        return []
+
+    now = datetime.now(UTC)
+    cutoff = None
+    if lookback_days is not None and lookback_days > 0:
+        cutoff = now.timestamp() - (lookback_days * 24 * 60 * 60)
+
+    snapshots: list[dict[str, Any]] = []
+    for file_path in sorted(p for p in root.rglob("*.json") if p.is_file()):
+        if cutoff is not None and file_path.stat().st_mtime < cutoff:
+            continue
+        try:
+            data = json.loads(file_path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                snapshots.append(data)
+        except Exception:
+            continue
+
+    snapshots.sort(key=lambda s: str(s.get("generated_at", "")))
     return snapshots

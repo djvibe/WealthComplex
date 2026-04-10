@@ -148,6 +148,7 @@ wealthgrabber activities --format json --dividends
 wealthgrabber assets --format json --by-account
 
 # Unified export for local UI consumers
+wealthgrabber export all
 wealthgrabber export all --out snapshot.json
 
 # Generate local dashboard HTML
@@ -208,16 +209,23 @@ The repo now includes a UI bridge pattern that keeps API/auth logic in Python:
   - `totals` (`portfolio_value`, `book_value`, `pnl`)
   - `meta` (`base_currency`, `source`)
 - `wealthgrabber export all` writes this payload to JSON.
+- By default, unified exports are written to dated paths under `~/.wealthgrabber/exports/YYYY/MM/DD/`.
 - `wealthgrabber dashboard` renders a local static HTML dashboard from either:
   - a provided snapshot (`--snapshot`), or
   - a live fetch when no snapshot is provided.
+- By default, generated dashboards are written to dated paths under `~/.wealthgrabber/dashboards/YYYY/MM/DD/`, and the latest dashboard is also mirrored to `~/.wealthgrabber/dashboard/index.html`.
 - The generated dashboard is a single local HTML file intended for fast inspection, not a long-running backend service.
 
 ## Snapshot Persistence / Analysis
 
 - `list`, `activities`, and `assets` automatically write timestamped snapshots under `~/.wealthgrabber/snapshots/` by default.
-- `WEALTHGRABBER_DATA_DIR` overrides the local data root for snapshots and generated dashboard output.
-- `analyze.py` loads stored snapshots and derives:
+- `WEALTHGRABBER_DATA_DIR` overrides the local data root for snapshots, dated exports, and dashboard output.
+- Default data layout under the root:
+  - `snapshots/accounts|activities|assets/YYYY/MM/DD/*.json`
+  - `exports/YYYY/MM/DD/*.json`
+  - `dashboards/YYYY/MM/DD/*.html`
+  - `dashboard/index.html` for the latest dashboard convenience copy
+- `analyze.py` loads stored command snapshots and can fall back to dated unified export history when raw per-command history is unavailable. It derives:
   - portfolio value change over the lookback window
   - unrealized P&L
   - concentration metrics

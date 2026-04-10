@@ -98,3 +98,41 @@ def test_format_analysis_json_and_csv():
     assert "metric,value" in csv_out
     assert "portfolio_value,1000.0" in csv_out
     assert "insight_1" in csv_out
+
+
+def test_build_analysis_falls_back_to_export_history(monkeypatch, tmp_path):
+    monkeypatch.setenv("WEALTHGRABBER_DATA_DIR", str(tmp_path))
+
+    export_path = tmp_path / "exports" / "2026" / "04" / "08" / "093000-000001.json"
+    export_path.parent.mkdir(parents=True, exist_ok=True)
+    export_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "generated_at": "2026-04-08T09:30:00+00:00",
+                "accounts": [{"value": 3200.0}],
+                "activities": [
+                    {"activity_type": "DIVIDEND", "description": "Dividend", "amount": 22.5, "sign": "+"}
+                ],
+                "positions": [
+                    {
+                        "symbol": "BTC",
+                        "market_value": 2500.0,
+                        "book_value": 3000.0,
+                        "pnl": -500.0,
+                        "pnl_pct": -16.67,
+                    }
+                ],
+                "totals": {"portfolio_value": 2500.0, "book_value": 3000.0, "pnl": -500.0},
+                "meta": {"base_currency": "CAD", "source": "wealthgrabber"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    analysis = build_analysis(lookback_days=365)
+
+    assert analysis["snapshot_counts"] == {"accounts": 1, "assets": 1, "activities": 1}
+    assert analysis["summary"]["portfolio_value"] == 3200.0
+    assert analysis["summary"]["market_value"] == 2500.0
+    assert analysis["summary"]["dividend_total"] == 22.5

@@ -100,7 +100,7 @@ Create one shared envelope schema for exports:
 
 ## Suggested immediate next step
 
-Implement **`wealthgrabber export all --format json --out snapshot.json`** first, then build a minimal browser page that reads this file.
+Implement **`wealthgrabber export all`** first, then build a minimal browser page that reads the dated export written under `~/.wealthgrabber/exports/`.
 
 This creates a low-risk bridge from “downloader CLI” to “visual wealth experience.”
 

@@ -13,6 +13,7 @@ from .auth import get_authenticated_client
 from .auth import logout as auth_logout
 from .dashboard import write_dashboard
 from .exporting import build_export_snapshot, load_export_snapshot, save_export_snapshot
+from .snapshots import default_export_snapshot_path
 
 app = typer.Typer(help="Wealthsimple Account Viewer CLI", no_args_is_help=True)
 export_app = typer.Typer(help="Export portfolio data for external tools")
@@ -238,11 +239,11 @@ def assets(
 @export_app.command("all")
 def export_all(
     ctx: typer.Context,
-    out: Path = typer.Option(
-        Path("snapshot.json"),
+    out: Optional[Path] = typer.Option(
+        None,
         "--out",
         "-o",
-        help="Output file for unified JSON snapshot.",
+        help="Output file for unified JSON snapshot. Defaults to a dated file under the local data dir.",
     ),
     activities_limit: int = typer.Option(
         200,
@@ -259,7 +260,7 @@ def export_all(
 
     try:
         snapshot = build_export_snapshot(ws, activities_limit=activities_limit)
-        written = save_export_snapshot(snapshot, out)
+        written = save_export_snapshot(snapshot, out or default_export_snapshot_path())
         print(f"Export written to: {written}")
     except Exception as e:
         print(f"Error exporting snapshot: {e}")

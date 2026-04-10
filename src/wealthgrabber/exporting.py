@@ -13,6 +13,7 @@ from ws_api import WealthsimpleAPI
 from wealthgrabber.accounts import get_accounts_data
 from wealthgrabber.activities import get_activities_data
 from wealthgrabber.assets import get_assets_data
+from wealthgrabber.snapshots import default_export_snapshot_path
 
 SNAPSHOT_SCHEMA_VERSION = "1.0"
 
@@ -78,8 +79,9 @@ def build_export_snapshot(
     }
 
 
-def save_export_snapshot(snapshot: dict[str, Any], out_path: Path) -> Path:
+def save_export_snapshot(snapshot: dict[str, Any], out_path: Path | None = None) -> Path:
     """Persist export snapshot to disk and return the written path."""
+    out_path = out_path or default_export_snapshot_path()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
     return out_path

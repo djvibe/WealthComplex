@@ -214,11 +214,12 @@ wealthgrabber assets --format csv > positions.csv
 Generate a canonical schema-v1 JSON payload with accounts, activities, positions, totals, and metadata for downstream apps.
 
 ```bash
+wealthgrabber export all
 wealthgrabber export all --out snapshot.json
 ```
 
 **Options:**
-- `--out/-o PATH`: Output file path (default: `snapshot.json`).
+- `--out/-o PATH`: Output file path (default: a dated file under `~/.wealthgrabber/exports/YYYY/MM/DD/`).
 - `--activities-limit N`: Maximum activities per account included in the snapshot (default: 200).
 
 Snapshot shape:
@@ -264,8 +265,10 @@ wealthgrabber dashboard --snapshot snapshot.json --out dashboard.html --no-open
 
 **Options:**
 - `--snapshot/-s PATH`: Read an existing export snapshot instead of fetching live data.
-- `--out/-o PATH`: Output HTML path (default: `~/.wealthgrabber/dashboard/index.html`).
+- `--out/-o PATH`: Output HTML path (default: a dated file under `~/.wealthgrabber/dashboards/YYYY/MM/DD/`).
 - `--open/--no-open`: Open generated dashboard in default browser (default: open).
+
+When `--out` is omitted, the latest generated dashboard is also mirrored to `~/.wealthgrabber/dashboard/index.html` for convenience.
 
 ### Analyze Portfolio (Historical Insights)
 Use persisted snapshots to generate portfolio insights over time.
@@ -288,19 +291,23 @@ Current analysis includes:
 
 ## Snapshot Storage
 
-Every time you run `list`, `activities`, or `assets`, the fetched data is snapshotted locally with a UTC timestamp. These snapshots are what power `wealthgrabber analyze`.
+Every time you run `list`, `activities`, or `assets`, the fetched data is snapshotted locally with a UTC timestamp. These snapshots power `wealthgrabber analyze`, and `analyze` can also fall back to unified export history when needed.
 
-You can also create a unified UI-oriented snapshot with `wealthgrabber export all --out snapshot.json`.
+You can also create a unified UI-oriented snapshot with `wealthgrabber export all`.
 
 Default root:
-- `~/.wealthgrabber/snapshots/`
+- `~/.wealthgrabber/`
 
 Structure:
 ```
-~/.wealthgrabber/snapshots/
-  accounts/YYYY/MM/DD/HHMMSS-microseconds.json
-  activities/YYYY/MM/DD/HHMMSS-microseconds.json
-  assets/YYYY/MM/DD/HHMMSS-microseconds.json
+~/.wealthgrabber/
+  snapshots/
+    accounts/YYYY/MM/DD/HHMMSS-microseconds.json
+    activities/YYYY/MM/DD/HHMMSS-microseconds.json
+    assets/YYYY/MM/DD/HHMMSS-microseconds.json
+  exports/YYYY/MM/DD/HHMMSS-microseconds.json
+  dashboards/YYYY/MM/DD/HHMMSS-microseconds.html
+  dashboard/index.html
 ```
 
 Override root directory with:

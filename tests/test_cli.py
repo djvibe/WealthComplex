@@ -467,17 +467,37 @@ def test_assets_command_profits_with_by_account(mock_print, mock_get_auth):
 @patch("wealthgrabber.cli.get_authenticated_client")
 @patch("wealthgrabber.cli.save_export_snapshot")
 @patch("wealthgrabber.cli.build_export_snapshot")
-def test_export_all_command_success(mock_build, mock_save, mock_get_auth):
+@patch("wealthgrabber.cli.default_export_snapshot_path")
+def test_export_all_command_success(mock_default_path, mock_build, mock_save, mock_get_auth):
     mock_ws = MagicMock()
     mock_get_auth.return_value = mock_ws
     mock_build.return_value = {"schema_version": "1.0"}
+    mock_default_path.return_value = Path("/tmp/export.json")
 
     result = runner.invoke(app, ["export", "all", "--out", "snapshot.json"])
 
     assert result.exit_code == 0
     mock_build.assert_called_with(mock_ws, activities_limit=200)
-    mock_save.assert_called_once()
+    mock_save.assert_called_once_with(mock_build.return_value, Path("snapshot.json"))
     assert "Export written to" in result.stdout
+
+
+@patch("wealthgrabber.cli.get_authenticated_client")
+@patch("wealthgrabber.cli.save_export_snapshot")
+@patch("wealthgrabber.cli.build_export_snapshot")
+@patch("wealthgrabber.cli.default_export_snapshot_path")
+def test_export_all_command_uses_dated_default_path(
+    mock_default_path, mock_build, mock_save, mock_get_auth
+):
+    mock_ws = MagicMock()
+    mock_get_auth.return_value = mock_ws
+    mock_build.return_value = {"schema_version": "1.0"}
+    mock_default_path.return_value = Path("/tmp/exports/2026/04/10/101010-000001.json")
+
+    result = runner.invoke(app, ["export", "all"])
+
+    assert result.exit_code == 0
+    mock_save.assert_called_once_with(mock_build.return_value, mock_default_path.return_value)
 
 
 @patch("wealthgrabber.cli.get_authenticated_client")

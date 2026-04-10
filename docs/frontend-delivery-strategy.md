@@ -15,8 +15,9 @@ This strategy builds on the prior research in `docs/view-experience-opportunitie
 
 Ship a new CLI command family focused on a dashboard feed:
 
-- `wealthgrabber export all --out snapshot.json`
-- `wealthgrabber dashboard --snapshot snapshot.json --open`
+- `wealthgrabber export all`
+- `wealthgrabber dashboard --open`
+- `wealthgrabber dashboard --snapshot ~/.wealthgrabber/exports/YYYY/MM/DD/<timestamp>.json --open`
 
 MVP UI capabilities:
 
@@ -37,7 +38,7 @@ Add periodic snapshot recording and a timeline viewer:
 
 - `wealthgrabber snapshot save`
 - `wealthgrabber snapshot list`
-- `wealthgrabber dashboard --history ~/.wealthgrabber/snapshots`
+- `wealthgrabber dashboard --history ~/.wealthgrabber`
 
 UI additions:
 
@@ -158,6 +159,6 @@ Build the MVP with:
 
 1. `export all` JSON contract.
 2. Local web dashboard reading that JSON.
-3. Snapshot save/history in the next increment.
+3. Dated snapshot/export history in the next increment.
 
 This keeps momentum high, gives you the visual exploration workflow you want (filters + graphs + screens), and avoids risky rewrites of the existing CLI foundation.

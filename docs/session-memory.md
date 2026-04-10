@@ -20,6 +20,8 @@ This file is a lightweight repo-local memory for future sessions. It should capt
   - `currency` defaults to `CAD` if omitted by the API
 - Account totals must not collapse mixed currencies into a single labeled total.
 - Dashboard money rendering should fall back to the snapshot base currency when an activity currency is missing.
+- Default local data storage is organized under `~/.wealthgrabber/` with dated `snapshots/`, `exports/`, and `dashboards/` trees; keep `dashboard/index.html` as a convenience copy of the latest rendered dashboard.
+- `analyze` should remain backward-compatible with raw per-command snapshots but can use dated unified export history as a fallback source.
 
 ## Update Rule
 

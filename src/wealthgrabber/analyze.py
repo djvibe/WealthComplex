@@ -9,6 +9,7 @@ from .snapshots import (
     SNAPSHOT_ACCOUNTS,
     SNAPSHOT_ACTIVITIES,
     SNAPSHOT_ASSETS,
+    load_export_snapshots,
     load_snapshots,
 )
 
@@ -30,11 +31,48 @@ def _safe_float(value: Any) -> float:
         return 0.0
 
 
+def _export_to_snapshot(
+    export_snapshot: dict[str, Any],
+    *,
+    record_key: str,
+    snapshot_type: str,
+) -> dict[str, Any]:
+    records = export_snapshot.get(record_key, [])
+    if not isinstance(records, list):
+        records = []
+    created_at = export_snapshot.get("generated_at")
+    if not isinstance(created_at, str):
+        created_at = ""
+    return {
+        "snapshot_type": snapshot_type,
+        "created_at": created_at,
+        "record_count": len(records),
+        "records": records,
+    }
+
+
 def build_analysis(lookback_days: int = 90) -> dict[str, Any]:
     """Build analysis summary and insight list from historical snapshots."""
     account_snaps = load_snapshots(SNAPSHOT_ACCOUNTS, lookback_days)
     asset_snaps = load_snapshots(SNAPSHOT_ASSETS, lookback_days)
     activity_snaps = load_snapshots(SNAPSHOT_ACTIVITIES, lookback_days)
+    export_snaps = load_export_snapshots(lookback_days)
+
+    if not account_snaps and export_snaps:
+        account_snaps = [
+            _export_to_snapshot(snap, record_key="accounts", snapshot_type=SNAPSHOT_ACCOUNTS)
+            for snap in export_snaps
+        ]
+    if not asset_snaps and export_snaps:
+        asset_snaps = [
+            _export_to_snapshot(snap, record_key="positions", snapshot_type=SNAPSHOT_ASSETS)
+            for snap in export_snaps
+        ]
+    if not activity_snaps and export_snaps:
+        activity_snaps = [
+            _export_to_snapshot(snap, record_key="activities", snapshot_type=SNAPSHOT_ACTIVITIES)
+            for snap in export_snaps
+        ]
 
     latest_accounts = _latest_records(account_snaps)
     latest_assets = _latest_records(asset_snaps)
