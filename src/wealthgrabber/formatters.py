@@ -2,6 +2,7 @@
 
 import csv
 import json
+from collections import defaultdict
 from dataclasses import asdict
 from io import StringIO
 from typing import Optional, Protocol, Sequence
@@ -50,6 +51,15 @@ class FormatterProtocol(Protocol):
 
 class TableFormatter:
     """Format data as aligned ASCII tables."""
+
+    @staticmethod
+    def _account_totals_by_currency(
+        accounts: Sequence[AccountData],
+    ) -> dict[str, float]:
+        totals: dict[str, float] = defaultdict(float)
+        for account in accounts:
+            totals[account.currency] += account.value
+        return dict(totals)
 
     @staticmethod
     def _format_position_row(pos: PositionData) -> str:
@@ -102,16 +112,21 @@ class TableFormatter:
         lines.append(f"{'Account':<40} {'Number':<20} {'Value':>18}")
         lines.append("-" * 80)
 
-        total_value = 0.0
         for acc in accounts:
             lines.append(
                 f"{acc.description:<40} {acc.number:<20} "
                 f"{acc.value:>15,.2f} {acc.currency}"
             )
-            total_value += acc.value
 
         lines.append("=" * 80)
-        lines.append(f"{'Total':<61} {total_value:>15,.2f} CAD")
+        totals = self._account_totals_by_currency(accounts)
+        if len(totals) == 1:
+            currency, total_value = next(iter(totals.items()))
+            lines.append(f"{'Total':<61} {total_value:>15,.2f} {currency}")
+        else:
+            lines.append("Totals by currency")
+            for currency, total_value in sorted(totals.items()):
+                lines.append(f"{currency:<61} {total_value:>15,.2f} {currency}")
         lines.append("=" * 80)
 
         return "\n".join(lines)

@@ -133,6 +133,38 @@ def test_print_accounts_json_format(mock_ws_client, capsys):
     assert data[0]["currency"] == "CAD"
 
 
+def test_print_accounts_mixed_currency_totals(mock_ws_client, capsys):
+    """Mixed-currency accounts should not be collapsed into a fake CAD total."""
+    mock_ws_client.get_accounts.return_value = [
+        {
+            "description": "CAD Cash",
+            "number": "CAD-001",
+            "financials": {
+                "currentCombined": {
+                    "netLiquidationValue": {"amount": "100.00", "currency": "CAD"}
+                }
+            },
+        },
+        {
+            "description": "USD Cash",
+            "number": "USD-001",
+            "financials": {
+                "currentCombined": {
+                    "netLiquidationValue": {"amount": "10.00", "currency": "USD"}
+                }
+            },
+        },
+    ]
+
+    print_accounts(mock_ws_client, show_zero_balances=True)
+    captured = capsys.readouterr()
+
+    assert "Totals by currency" in captured.out
+    assert "100.00 CAD" in captured.out
+    assert "10.00 USD" in captured.out
+    assert "110.00 CAD" not in captured.out
+
+
 def _get_account_descriptions(accounts) -> set[str]:
     """Extract descriptions from account list."""
     return {acc.description for acc in accounts}

@@ -8,11 +8,18 @@ Wealthsimple Account Viewer CLI. Secure and simple tool to view your Wealthsimpl
 - **Transaction History**: View activities and transactions across your accounts.
 - **Asset Positions**: Monitor your investment holdings with P&L tracking.
 - **Multiple Output Formats**: Table (default), JSON, and CSV output for easy integration.
+- **Unified Snapshot Export**: Build one JSON payload for downstream dashboards and tools.
+- **Local Dashboard**: Generate a single-file HTML dashboard from a live fetch or saved snapshot.
+- **Historical Snapshots**: Persist local snapshots automatically for later review and analysis.
+- **Portfolio Analysis**: Summarize concentration, dividend activity, unrealized P&L, and history deltas.
 - **Privacy Focused**: No data is stored externally; everything runs locally.
 
 ## Installation
 
 This project is managed with `uv`.
+
+Current dependency note:
+- `ws-api` is pinned to `0.32.3` because older versions were unreliable against Wealthsimple's current login flow.
 
 ### Quick Install
 
@@ -47,9 +54,28 @@ uv sync
 uv run wealthgrabber --help
 ```
 
+### Secure Linux Setup
+
+For Linux desktop environments, prefer the system Secret Service keyring and avoid plaintext fallback keyrings.
+
+Recommended invocation:
+
+```bash
+PYTHON_KEYRING_BACKEND=keyring.backends.SecretService.Keyring \
+UV_CACHE_DIR=/tmp/uv-cache \
+/home/djvibe/.local/bin/uv run wealthgrabber --help
+```
+
+If you want this behavior by default, add the following to `~/.bashrc`:
+
+```bash
+export PYTHON_KEYRING_BACKEND=keyring.backends.SecretService.Keyring
+export UV_CACHE_DIR=/tmp/uv-cache
+```
+
 ## Usage
 
-The CLI provides eight main commands/features: `login`, `logout`, `list`, `activities`, `assets`, `export all`, `dashboard`, and `analyze`.
+The CLI provides these primary commands: `login`, `logout`, `list`, `activities`, `assets`, `export all`, `dashboard`, and `analyze`.
 
 All commands support the `--verbose/-v` flag for detailed status messages during execution.
 
@@ -60,6 +86,14 @@ Authenticate with your Wealthsimple credentials. This supports 2FA and will cach
 
 ```bash
 wealthgrabber login
+```
+
+Recommended on Linux:
+
+```bash
+PYTHON_KEYRING_BACKEND=keyring.backends.SecretService.Keyring \
+UV_CACHE_DIR=/tmp/uv-cache \
+/home/djvibe/.local/bin/uv run wealthgrabber login
 ```
 
 **Options:**
@@ -104,6 +138,10 @@ wealthgrabber list --liquid-only --format json
 wealthgrabber list --not-liquid --no-show-zero
 ```
 
+Notes:
+- Table totals are grouped by currency when accounts span multiple currencies.
+- JSON/CSV outputs preserve per-account currency values.
+
 ### Transactions
 
 #### List Activities
@@ -133,6 +171,11 @@ wealthgrabber activities --account TFSA-001 --limit 100
 # Export activities to CSV
 wealthgrabber activities --format csv > activities.csv
 ```
+
+Notes:
+- Activity payloads normalize `amount` to a non-negative numeric value.
+- Transaction direction is represented separately via `sign` (`+` or `-`).
+- Missing activity currencies fall back to `CAD`.
 
 ### Investments
 
@@ -168,7 +211,7 @@ wealthgrabber assets --format csv > positions.csv
 ### Unified Export
 
 #### Export Everything to One Snapshot
-Generate a single JSON payload with accounts, activities, positions, and totals for downstream apps.
+Generate a canonical schema-v1 JSON payload with accounts, activities, positions, totals, and metadata for downstream apps.
 
 ```bash
 wealthgrabber export all --out snapshot.json
@@ -178,10 +221,35 @@ wealthgrabber export all --out snapshot.json
 - `--out/-o PATH`: Output file path (default: `snapshot.json`).
 - `--activities-limit N`: Maximum activities per account included in the snapshot (default: 200).
 
+Snapshot shape:
+
+```json
+{
+  "schema_version": "1.0",
+  "generated_at": "ISO-8601",
+  "accounts": [],
+  "activities": [],
+  "positions": [],
+  "totals": {
+    "portfolio_value": 0,
+    "book_value": 0,
+    "pnl": 0
+  },
+  "meta": {
+    "base_currency": "CAD",
+    "source": "wealthgrabber"
+  }
+}
+```
+
+Export notes:
+- `activities` records use normalized `amount` + `sign` semantics.
+- `meta.base_currency` is the dashboard default, not a guarantee that every account or activity is denominated in that currency.
+
 ### Dashboard
 
 #### Generate Local Dashboard HTML
-Create a local interactive dashboard from a snapshot file or a live fetch.
+Create a local interactive dashboard from a snapshot file or a live fetch. The current implementation writes a single HTML file for local viewing; it does not start a persistent web server.
 
 ```bash
 # From live API data
@@ -211,9 +279,16 @@ wealthgrabber analyze --lookback-days 180 --format json
 - `--lookback-days/-d N`: Number of days of stored snapshots to analyze (default: 90).
 - `--format/-f {table,json,csv}`: Output format (default: table).
 
+Current analysis includes:
+- portfolio value over the stored lookback window
+- unrealized P&L and P&L percentage
+- top position concentration
+- negative-position exposure
+- dividend event count and total
+
 ## Snapshot Storage
 
-Every time you run `list`, `activities`, or `assets`, the fetched data is snapshotted locally with a UTC timestamp.
+Every time you run `list`, `activities`, or `assets`, the fetched data is snapshotted locally with a UTC timestamp. These snapshots are what power `wealthgrabber analyze`.
 
 You can also create a unified UI-oriented snapshot with `wealthgrabber export all --out snapshot.json`.
 
@@ -230,6 +305,45 @@ Structure:
 
 Override root directory with:
 - `WEALTHGRABBER_DATA_DIR=/path/to/data`
+
+## Troubleshooting
+
+### Keyring backend errors
+
+If login fails with a keyring backend error, verify the app is using your desktop Secret Service keyring:
+
+```bash
+PYTHON_KEYRING_BACKEND=keyring.backends.SecretService.Keyring \
+UV_CACHE_DIR=/tmp/uv-cache \
+/home/djvibe/.local/bin/uv run python -c "import keyring; print(keyring.get_keyring())"
+```
+
+### Wealthsimple login bootstrap issues
+
+If login fails with `Couldn't find wssdi in login page response headers`, make sure you are on the pinned dependency set from this repo:
+
+```bash
+uv sync
+```
+
+This repo pins `ws-api==0.32.3` because older versions were more brittle.
+
+## Roadmap Notes
+
+The product docs in `docs/` include both shipped features and planned follow-up work.
+
+Implemented now:
+- `export all`
+- `dashboard`
+- automatic snapshot persistence
+- `analyze`
+
+Planned in the feature docs, but not yet exposed as dedicated CLI commands:
+- `snapshot save`
+- `snapshot list`
+- dashboard history mode
+- compare mode / time navigation
+- richer insight screens and guided workflows
 
 ## Output Formats
 
@@ -256,4 +370,10 @@ If you want to evolve `wealthgrabber` from a downloader CLI into a richer viewin
 They outline:
 - the local-first dashboard roadmap,
 - snapshot/timeline ideas, and
-- phased implementation details now being delivered in CLI commands (`export all`, `dashboard`).
+- phased implementation details spanning both shipped commands and planned next steps.
+
+## Contributor Notes
+
+If you are updating behavior or workflows, also review:
+- [`AGENTS.md`](AGENTS.md)
+- [`docs/session-memory.md`](docs/session-memory.md)

@@ -110,9 +110,10 @@ def _transform_activity(
     date_str = _format_date(activity.get("occurredAt", ""))
     act_type = activity.get("type", "N/A")[:14]
     description = _enhance_description(ws, activity, security_cache)[:34]
-    amount = float(activity.get("amount") or 0)
-    currency = activity.get("currency", "CAD")
+    raw_amount = float(activity.get("amount") or 0)
     sign = "+" if activity.get("amountSign") == "positive" else "-"
+    amount = abs(raw_amount)
+    currency = activity.get("currency") or "CAD"
 
     return ActivityData(
         date=date_str,

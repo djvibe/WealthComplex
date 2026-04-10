@@ -88,7 +88,7 @@ def render_dashboard_html(snapshot: dict[str, Any]) -> str:
 
 <script>
 const snapshot = JSON.parse(`{data_json}`);
-const money = (n, ccy = (snapshot.meta?.base_currency || 'CAD')) => `${{Number(n || 0).toLocaleString(undefined, {{maximumFractionDigits: 2, minimumFractionDigits: 2}})}} ${{ccy}}`;
+const money = (n, ccy = (snapshot.meta?.base_currency || 'CAD')) => `${{Number(n || 0).toLocaleString(undefined, {{maximumFractionDigits: 2, minimumFractionDigits: 2}})}} ${{ccy || snapshot.meta?.base_currency || 'CAD'}}`;
 
 const positions = snapshot.positions || [];
 const activities = snapshot.activities || [];

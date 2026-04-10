@@ -6,6 +6,7 @@ from wealthgrabber.activities import (
     _enhance_description,
     _format_date,
     _get_security_name,
+    _transform_activity,
     get_account_id_by_number,
     get_activities_data,
     is_dividend_activity,
@@ -532,6 +533,44 @@ def test_get_activities_data_truncates_long_description(mock_ws_client):
 
     assert len(result) == 1
     assert len(result[0].description) <= 34
+
+
+def test_transform_activity_normalizes_negative_amount_and_missing_currency(
+    mock_ws_client,
+):
+    """Negative amounts should not render as double negatives and missing currency should default."""
+    activity = {
+        "type": "SPEND",
+        "description": "Coffee purchase",
+        "occurredAt": "2026-02-05T10:00:00Z",
+        "amountSign": "negative",
+        "amount": "-32.21",
+        "currency": None,
+    }
+
+    result = _transform_activity(mock_ws_client, activity, {}, "Cash (ACC-1)")
+
+    assert result.amount == 32.21
+    assert result.sign == "-"
+    assert result.currency == "CAD"
+
+
+def test_transform_activity_keeps_positive_amount_positive(mock_ws_client):
+    """Positive amounts should remain positive while preserving sign metadata."""
+    activity = {
+        "type": "DIVIDEND",
+        "description": "Dividend payment",
+        "occurredAt": "2026-02-05T10:00:00Z",
+        "amountSign": "positive",
+        "amount": "12.34",
+        "currency": "USD",
+    }
+
+    result = _transform_activity(mock_ws_client, activity, {}, "TFSA (ACC-1)")
+
+    assert result.amount == 12.34
+    assert result.sign == "+"
+    assert result.currency == "USD"
 
 
 def test_print_activities_amount_signs(mock_ws_client, capsys):

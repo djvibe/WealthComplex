@@ -6,21 +6,34 @@ This document contains context, conventions, and instructions for AI agents work
 ## Project Overview
 `wealthgrabber` is a Python CLI application for wealth management operations. It appears to interface with external services using `ws-api` and `requests`, and handles authentication securely via `keyring`.
 
+Recent product additions extend the CLI into a local-first portfolio viewing tool:
+- Unified JSON export via `wealthgrabber export all`
+- Static dashboard HTML generation via `wealthgrabber dashboard`
+- Automatic timestamped snapshot persistence for `list`, `activities`, and `assets`
+- Historical portfolio analysis via `wealthgrabber analyze`
+
 ### Architecture
 - **Root**: `src/wealthgrabber`
 - **Entry Point**: `src/wealthgrabber/cli.py` (exposed as `wealthgrabber` script)
 - **Authentication**: `src/wealthgrabber/auth.py`
-- **Core Logic**: `src/wealthgrabber/accounts.py`
+- **Core Logic**: `src/wealthgrabber/accounts.py`, `activities.py`, `assets.py`
+- **Export Contract**: `src/wealthgrabber/exporting.py`
+- **Dashboard Renderer**: `src/wealthgrabber/dashboard.py`
+- **Snapshot Persistence**: `src/wealthgrabber/snapshots.py`
+- **Historical Analysis**: `src/wealthgrabber/analyze.py`
 - **Dependencies**: Managed via `uv` (standard `pyproject.toml`).
 
 ## Development Environment
 - **Package Manager**: `uv`
 - **Python Version**: >=3.12
+- **Linux Keyring**: Prefer `keyring.backends.SecretService.Keyring` via the system GNOME Secret Service backend. Do not add or document plaintext keyring fallbacks as the default path.
 
 ### Key Commands
 - **Install/Sync**: `uv sync`
 - **Run App**: `uv run wealthgrabber --help` or `uv run python -m wealthgrabber`
 - **Locate Package**: `uv run python -c "import wealthgrabber; print(wealthgrabber.__file__)"`
+- **Preferred Secure Run**:
+  `PYTHON_KEYRING_BACKEND=keyring.backends.SecretService.Keyring UV_CACHE_DIR=/tmp/uv-cache uv run wealthgrabber --help`
 
 ## Testing & Quality
 - **Test Runner**: `pytest`
@@ -51,6 +64,8 @@ src/wealthgrabber/
 ├── cli.py               # Typer CLI application
 ├── exporting.py         # Unified snapshot export contract
 ├── dashboard.py         # Static dashboard HTML rendering
+├── snapshots.py         # Local snapshot persistence helpers
+├── analyze.py           # Historical portfolio analysis
 tests/                   # Pytest suite
 pyproject.toml           # Project configuration
 ```
@@ -77,6 +92,11 @@ These functions handle:
 - **`ActivityData`** - `date`, `activity_type`, `description`, `amount`, `currency`, `sign`, `account_label`
 - **`PositionData`** - `symbol`, `name`, `quantity`, `market_value`, `book_value`, `currency`, `pnl`, `pnl_pct`, `account_label`
 
+Activity model conventions:
+- `amount` should be non-negative.
+- `sign` carries transaction direction (`+` or `-`).
+- `currency` should never be `None`; default to `"CAD"` when the API omits it.
+
 ### Layer 3: Formatters
 `formatters.py` implements output formatters using a protocol-based design:
 
@@ -89,6 +109,11 @@ These functions handle:
 - **`TableFormatter`** - ASCII tables with borders, alignment, and totals (default)
 - **`JsonFormatter`** - JSON arrays with optional totals wrapper
 - **`CsvFormatter`** - CSV format with headers and optional totals row
+
+Formatter rules:
+- Do not combine mixed-currency account balances into a single fake total.
+- When multiple account currencies exist, totals should be shown per currency.
+- Avoid duplicating sign information by formatting from normalized activity data.
 
 **Factory:** `get_formatter(format_type: str) -> FormatterProtocol`
 
@@ -109,7 +134,7 @@ print(output) to stdout
 
 ## CLI Usage
 
-All commands support `--format` option with choices: `table` (default), `json`, `csv`
+Data-display commands support `--format` with choices: `table` (default), `json`, `csv`
 
 ```bash
 # Table format (default)
@@ -122,12 +147,16 @@ wealthgrabber list --format json
 wealthgrabber activities --format json --dividends
 wealthgrabber assets --format json --by-account
 
-# Unified export for web/desktop UI
+# Unified export for local UI consumers
 wealthgrabber export all --out snapshot.json
 
 # Generate local dashboard HTML
 wealthgrabber dashboard --snapshot snapshot.json --open
 wealthgrabber dashboard --no-open
+
+# Analyze persisted snapshot history
+wealthgrabber analyze
+wealthgrabber analyze --lookback-days 180 --format json
 
 # CSV format
 wealthgrabber list --format csv > accounts.csv
@@ -182,6 +211,41 @@ The repo now includes a UI bridge pattern that keeps API/auth logic in Python:
 - `wealthgrabber dashboard` renders a local static HTML dashboard from either:
   - a provided snapshot (`--snapshot`), or
   - a live fetch when no snapshot is provided.
+- The generated dashboard is a single local HTML file intended for fast inspection, not a long-running backend service.
+
+## Snapshot Persistence / Analysis
+
+- `list`, `activities`, and `assets` automatically write timestamped snapshots under `~/.wealthgrabber/snapshots/` by default.
+- `WEALTHGRABBER_DATA_DIR` overrides the local data root for snapshots and generated dashboard output.
+- `analyze.py` loads stored snapshots and derives:
+  - portfolio value change over the lookback window
+  - unrealized P&L
+  - concentration metrics
+  - negative-position exposure
+  - dividend activity totals
+
+## Authentication / Dependency Notes
+
+- The repo pins `ws-api==0.32.3` because earlier versions were brittle against Wealthsimple's current login flow.
+- When verifying login behavior on Linux, prefer running outside restricted sandboxes so the desktop DBus and Secret Service keyring are reachable.
+- Keep the documented runtime path aligned with system keyring usage.
+
+## Memory / Lessons
+
+- Repo-local operating memory lives in [`docs/session-memory.md`](docs/session-memory.md).
+- Use it for stable lessons learned, environment quirks, and recurring workflow decisions.
+- Prefer short, high-signal entries over long logs.
+- Update it when a session uncovers a reusable lesson that is likely to matter again.
+
+## Current State vs Roadmap
+
+The feature docs describe both implemented capabilities and next-step ideas. As of the current codebase:
+- Implemented: `export all`, `dashboard`, automatic snapshot persistence, `analyze`
+- Not yet implemented as dedicated CLI commands: `snapshot save`, `snapshot list`, dashboard history/time-slider mode, compare mode, URL-encoded dashboard filters
+
+When updating docs or code:
+- Document shipped behavior separately from roadmap items.
+- Do not describe planned snapshot/history commands as available until they exist in `cli.py`.
 
 When extending this pattern:
 - Keep export schema changes backward-compatible where possible.
@@ -190,3 +254,4 @@ When extending this pattern:
 ## PR Instructions
 - Ensure `uv run pytest` passes before finishing.
 - Keep `AGENTS.md` updated if new tools or patterns are introduced.
+- Update [`docs/session-memory.md`](docs/session-memory.md) when the session produces a reusable operational lesson.
