@@ -23,6 +23,7 @@ This file is a lightweight repo-local memory for future sessions. It should capt
 - Default local data storage is organized under `~/.wealthgrabber/` with dated `snapshots/`, `exports/`, and `dashboards/` trees; keep `dashboard/index.html` as a convenience copy of the latest rendered dashboard.
 - `analyze` should remain backward-compatible with raw per-command snapshots but can use dated unified export history as a fallback source.
 - Repo-local generated scratch artifacts should go in `working/` rather than the project root; keep `.playwright-cli/` at the root but git-ignored.
+- Wealthsimple’s app may present bot/security defenses to headless browser automation; prefer headed persistent Playwright sessions with manual user login when capturing UI styles or rendered app pages.
 
 ## Update Rule
 

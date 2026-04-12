@@ -237,6 +237,7 @@ The repo now includes a UI bridge pattern that keeps API/auth logic in Python:
   - concentration metrics
   - negative-position exposure
   - dividend activity totals
+- For browser-driven style/reference capture experiments, keep generated artifacts under repo-local `working/` rather than adding new durable app storage paths.
 
 ## Authentication / Dependency Notes
 
